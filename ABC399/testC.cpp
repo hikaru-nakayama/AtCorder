@@ -33,6 +33,18 @@ void bfs(int vertex) {
 	}
 }
 
+void dfs(int vertex) {
+	colors[vertex] = 1;
+
+	for ( size_t i = 0; i < G[vertex].size(); i ++) {
+		int neighbor = G[vertex][i];
+		if ( colors[neighbor] != 1 ) {
+			dfs(neighbor);
+		}
+	}
+
+}
+
 
 void input() {
 	cin >> N >> M;
@@ -57,7 +69,7 @@ int main() {
 		int a = colors[i];
 		if ( a != 1 ) {
 			k++;
-			bfs(i);
+			dfs(i);
 		}
 	}
 
