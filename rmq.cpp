@@ -11,8 +11,9 @@ struct RMQ {
 
     int n;          // 葉の数
     vector<T> dat;  // 完全二分木の配列
+    vector<T> lazy;  // 完全二分木の配列（遅延評価用）
 
-    RMQ(int n_) : n(), dat(n_ * 4) {
+    RMQ(int n_) : n(), dat(n_ * 4), lazy(n_ * 4) {
         INF = numeric_limits<T>::max(); 
 
         // 必要な葉の数を計算
@@ -22,7 +23,19 @@ struct RMQ {
             x *= 2;
         }
         n = x;
-        dat.assign(4 * n, INF); // 全体をINFで初期化
+        dat.assign(n_ * 4, INF); // 全体をINFで初期化
+        lazy.assign(n_ * 4, INF); // 全体をINFで初期化
+    }
+
+    void eval(int k) {
+	    if ( lazy[k] == INF ) return;
+	    if ( k < n - 1 ) {
+		    lazy[k*2 + 1] = lazy[k];
+		    lazy[k*2 + 2] = lazy[k];
+	    }
+	    dat[k] = lazy[k];
+	    lazy[k] = INF;
+
     }
 
     // i:更新したい数列の位置 (0-indexed)
@@ -36,6 +49,22 @@ struct RMQ {
         }
     }
 
+    // [a, b) をxで更新する
+    void bulk_update(int a, int b, T x) {
+	    bulk_update_sub(a, b, x, 0, 0, n);
+    }
+
+    void bulk_update_sub(int a, int b, T x, int k, int l, int r) {
+        if (a <= l && r <= b) { // クエリ範囲がノード区間を完全に含む場合
+          lazy[k] = x;
+	  eval(k);
+        } else if ( a < r && l < b )  { // 一部が重なる場合
+	  bulk_update_sub(a, b, x, k * 2 + 1, l, ( l + r ) / 2);
+	  bulk_update_sub(a, b, x, k * 2 + 2, ( l + r ) / 2, r);
+	  dat[k] = min(dat[k * 2 + 1], dat[k * 2 + 2]);
+        }
+    }
+
     // [a, b) の区間に対するクエリ
     T query(int a, int b) {
         // dat[0]は [0, n) を表す
@@ -44,6 +73,7 @@ struct RMQ {
 
     // dat[k]が表す区間を[l, r) とする
     T query_sub(int a, int b, int k, int l, int r) {
+	eval(k);
         if (r <= a || b <= l) { // クエリ範囲とノード区間が全く重ならない場合
             return INF;
         } else if (a <= l && r <= b) { // クエリ範囲がノード区間を完全に含む場合
@@ -70,16 +100,11 @@ int main() {
     rmq.update(4, 9);
     rmq.update(5, 4);
 
-    // クエリの実行
-    cout << "Query [0, 6): " << rmq.query(0, 6) << endl; // 1
-    cout << "Query [1, 4): " << rmq.query(1, 4) << endl; // 1
-    cout << "Query [4, 6): " << rmq.query(4, 6) << endl; // 4
-    cout << "Query [7, 9): " << rmq.query(7, 9) << endl; // INF (INT_MAX)
+    cout << rmq.query(0, 2) << endl;
 
-    RMQ<long long> rmq_ll(N);
-    rmq_ll.update(0, 10000000000LL);
-    rmq_ll.update(1, 100LL);
-    cout << "Query [0, 2) (long long): " << rmq_ll.query(0, 2) << endl; // 100
+    rmq.bulk_update(0, 2, 1);
+
+    cout << rmq.query(0, 2) << endl;
 
     return 0;
 }
